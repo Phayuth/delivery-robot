@@ -8,6 +8,10 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BNO055.h>
 #include <utility/imumaths.h>
+#include <ros/time.h>
+#include <tf/tf.h>
+#include <tf/transform_broadcaster.h>
+#include <geometry_msgs/Quaternion.h>
 
 // Handles startup and shutdown of ROS
 ros::NodeHandle nh;
@@ -126,6 +130,7 @@ ros::Publisher leftPub("left_ticks", &left_wheel_tick_count);
 // Init Imu Pub
 sensor_msgs::Imu imu_data;
 ros::Publisher imupub("imu", &imu_data);
+geometry_msgs::Quaternion q;
 
 // Init Twist Sub
 ros::Subscriber<geometry_msgs::Twist> twt_sub("/cmd_vel", &twist_cb);
@@ -180,16 +185,19 @@ void loop() {
     myIMU.getCalibration(&system, &gyro, &accel, &mg);
     imu::Vector<3> acc = myIMU.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
     imu::Vector<3> gyr = myIMU.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
+    imu::Vector<3> rpy = myIMU.getVector(Adafruit_BNO055::VECTOR_EULER);
 
     //populate data to msg
     //imu_data.header.seq = 0;
     //imu_data.header.stamp = 0;
     imu_data.header.frame_id = "imu_link";
 
-    imu_data.orientation.x = 0;
-    imu_data.orientation.y = 0;
-    imu_data.orientation.z = 0;
-    imu_data.orientation.w = 0;
+    q = tf::createQuaternionFromYaw(rpy.z());
+    
+    imu_data.orientation.x = q.x;
+    imu_data.orientation.y = q.y;
+    imu_data.orientation.z = q.z;
+    imu_data.orientation.w = q.w;
 
     imu_data.angular_velocity.x = gyr.x();
     imu_data.angular_velocity.y = gyr.y();

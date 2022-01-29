@@ -1,0 +1,25 @@
+<launch>
+	<!-- Example of how to create launch file
+	<ex if you run ros by rosrun: rosrun NameOfPackage ExecutableName parameter1=value1 parameter2=value2 ...
+	<node pkg="NameOfPackage" type="ExecutableName" name="up to u" output="screen"<-print any info in rosrun to terminal>
+		<param name="parameter1" value="value2"/>
+		<param name="parameter2" value="value2"/> -->
+	
+	<!-- START LAUNCH FILE HERE -->
+	
+	<!-- ARDUINO NODE -->
+	<node pkg="rosserial_python" type="serial_node.py" name="serial_node" output="screen">
+		<param name="port" value="/dev/ttyACM1"/>
+		<!--<param name="baud" value="115200"/>-->
+	</node>
+	
+	<!-- CAMERA NODE -->
+	<node pkg="cv_camera" type="cv_camera_node" name="logitech_camera_node"></node>
+
+	<!-- LIDAR NODE -->
+	<node pkg="urg_node" type="urg_node" name="hokuyo_node"></node>
+		<param name="port" value="/dev/ttyACM0"/>
+
+	<!-- END LAUNCH FILE -->
+	
+</launch>

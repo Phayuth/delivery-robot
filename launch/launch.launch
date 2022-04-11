@@ -7,18 +7,25 @@
 	
 	<!-- START LAUNCH FILE HERE -->
 	
+	<!-- STATIC TRANSFORMATION NODE -->
+	<node pkg="tf" type="static_transform_publisher" name="left_link" args="0 0.22 0 0 0 0 1 /Base_link /Left_link 100"> </node>
+	<node pkg="tf" type="static_transform_publisher" name="right_link" args="0 -0.22 0 0 0 0 1 /Base_link /Right_link 100"> </node>
+	<node pkg="tf" type="static_transform_publisher" name="imu_link" args="0 0 0.12 0 0 0 1 /Base_link /imu_link 100"> </node>
+	<node pkg="tf" type="static_transform_publisher" name="laser_link" args="0.4 0 0.12 0 0 0 1 /Base_link /laser_link 100"> </node>
+	<node pkg="tf" type="static_transform_publisher" name="camera_link" args="0 0 0.5 0 0 0 1 /Base_link /camera_link 100"> </node>
+	
 	<!-- ARDUINO NODE -->
 	<node pkg="rosserial_python" type="serial_node.py" name="serial_node" output="screen">
-		<param name="port" value="/dev/ttyACM1"/>
+		<param name="port" value="/dev/ttyACM0"/>
 		<!--<param name="baud" value="115200"/>-->
 	</node>
-	
+
 	<!-- CAMERA NODE -->
-	<node pkg="cv_camera" type="cv_camera_node" name="logitech_camera_node"></node>
+	<!--node pkg="cv_camera" type="cv_camera_node" name="logitech_camera_node"></node-->
 
 	<!-- LIDAR NODE -->
-	<node pkg="urg_node" type="urg_node" name="hokuyo_node"></node>
-		<param name="port" value="/dev/ttyACM0"/>
+	<!--node pkg="urg_node" type="urg_node" name="hokuyo_node"></node>
+		<param name="port" value="/dev/ttyACM0"/-->
 
 	<!-- END LAUNCH FILE -->
 	

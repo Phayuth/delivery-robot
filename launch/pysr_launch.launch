@@ -1,0 +1,16 @@
+<launch>
+	<!-- Example of how to create launch file
+	<ex if you run ros by rosrun: rosrun NameOfPackage ExecutableName parameter1=value1 parameter2=value2 ...
+	<node pkg="NameOfPackage" type="ExecutableName" name="up to u" output="screen"<-print any info in rosrun to terminal>
+		<param name="parameter1" value="value2"/>
+		<param name="parameter2" value="value2"/> -->
+	
+	<!-- START LAUNCH FILE HERE -->
+	
+	<node pkg="delivery-robot" type="wlradian.py" name="wheelradconvt_node" output="screen"> </node>
+
+	<node pkg="delivery-robot" type="odom_encd.py" name="encod_node" output="screen"> </node>
+
+	<!-- END LAUNCH FILE -->
+	
+</launch>

@@ -2,12 +2,14 @@
 #define USE_USBCON // For Arduino Due rosserial in every board and computer
 #include <ros.h>
 #include <std_msgs/Int32.h>
+#include <std_msgs/Float32.h>
 #include <sensor_msgs/Imu.h>
-#include <geometry_msgs/Twist.h>
+
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BNO055.h>
 #include <utility/imumaths.h>
+
 #include <ros/time.h>
 #include <tf/tf.h>
 #include <tf/transform_broadcaster.h>
@@ -38,43 +40,49 @@ uint8_t Interrupt_right_A = 8;
 uint8_t Interrupt_right_B = 9;
 
 // preassign variable
-double left_pwm; // pwm for left wheel
-double right_pwm; // pwm for right wheel
+int left_pwm; // pwm for left wheel
+float left_velo; // recv velocity from controller in rad/s
+int right_pwm; // pwm for right wheel
+float right_velo; // recv velocity from controller in rad/s
 
-// mobile robot parameter
-double V;      // linear velocity
-double omega;  // angular velocity
-double L = 0.44;  // robot base length in m
-double r = 0.07;  // robot wheel radius in m
-double left_speed;  // omega left wheel rad/s
-double right_speed; // omega right wheel rad/s
 
-// Minumum and maximum values for 16-bit integers
-//const int encoder_minimum = -32768;
-//const int encoder_maximum = 32767;
-
-// callback function for subcribe to twist msg
-void twist_cb(const geometry_msgs::Twist& msg)
+// callback function for subcribe to left wheel
+void left_cmd_vel_cb(const std_msgs::Float32& msg)
 {
   // get linear and angular velocity from twist
-  V = msg.linear.x;
-  omega = msg.angular.z;
+  left_velo = msg.data;
+  left_pwm = 1 * left_velo + 0;
 
-  // convert V and omega to each wheel speed
-  left_speed = (2 * V - L * omega) / (2 * r);
-  right_speed = (2 * V + L * omega) / (2 * r);
-
-  // convert each wheel speed to pwm value, y=Ax+b, A=0.22,b=0.1
-  left_pwm = 1 * left_speed + 0;
-  right_pwm = 1 * right_speed + 0;
-
-  // limit pwm
   if (left_pwm < -250) {
-    left_pwm = -250;
+    right_pwm = -250;
   }
   if (left_pwm > 250) {
-    left_pwm = 250;
+    right_pwm = 250;
   }
+
+  // write pwm to pin
+  if ( left_pwm < 0) {
+    analogWrite(left_motor_Rpwm_pin, 0);
+    analogWrite(left_motor_Lpwm_pin, left_pwm * -1);
+  }
+  else if ( left_pwm > 0) {
+    analogWrite(left_motor_Rpwm_pin, left_pwm);
+    analogWrite(left_motor_Lpwm_pin, 0);
+  }
+  else {
+    analogWrite(left_motor_Rpwm_pin, 0);
+    analogWrite(left_motor_Lpwm_pin, 0);
+  }
+}
+
+
+// callback function for subcribe to right wheel
+void right_cmd_vel_cb(const std_msgs::Float32& msg)
+{
+  // get linear and angular velocity from twist
+  right_velo = msg.data;
+  right_pwm = 1 * right_velo + 0;
+
   if (right_pwm < -250) {
     right_pwm = -250;
   }
@@ -83,38 +91,15 @@ void twist_cb(const geometry_msgs::Twist& msg)
   }
 
   // write pwm to pin
-  if ( left_pwm < 0 && right_pwm < 0) {
-    // left reverse , right reverse
-    analogWrite(left_motor_Rpwm_pin, 0);
-    analogWrite(left_motor_Lpwm_pin, left_pwm * -1);
+  if (right_pwm < 0) {
     analogWrite(right_motor_Rpwm_pin, 0);
     analogWrite(right_motor_Lpwm_pin, right_pwm * -1);
   }
-  else if ( left_pwm > 0 && right_pwm > 0) {
-    // left forward , right forward
-    analogWrite(left_motor_Rpwm_pin, left_pwm);
-    analogWrite(left_motor_Lpwm_pin, 0);
+  else if (right_pwm > 0) {
     analogWrite(right_motor_Rpwm_pin, right_pwm);
     analogWrite(right_motor_Lpwm_pin, 0);
-  }
-  else if ( left_pwm < 0 && right_pwm > 0) {
-    // left reverse , right forward
-    analogWrite(left_motor_Rpwm_pin, 0);
-    analogWrite(left_motor_Lpwm_pin, left_pwm * -1);
-    analogWrite(right_motor_Rpwm_pin, right_pwm);
-    analogWrite(right_motor_Lpwm_pin, 0);
-  }
-  else if ( left_pwm > 0 && right_pwm < 0) {
-    // left forward , right reverse
-    analogWrite(left_motor_Rpwm_pin, left_pwm);
-    analogWrite(left_motor_Lpwm_pin, 0);
-    analogWrite(right_motor_Rpwm_pin, 0);
-    analogWrite(right_motor_Lpwm_pin, right_pwm * -1);
   }
   else {
-    // neutral
-    analogWrite(left_motor_Rpwm_pin, 0);
-    analogWrite(left_motor_Lpwm_pin, 0);
     analogWrite(right_motor_Rpwm_pin, 0);
     analogWrite(right_motor_Lpwm_pin, 0);
   }
@@ -132,8 +117,11 @@ sensor_msgs::Imu imu_data;
 ros::Publisher imupub("imu", &imu_data);
 geometry_msgs::Quaternion q;
 
-// Init Twist Sub
-ros::Subscriber<geometry_msgs::Twist> twt_sub("/cmd_vel", &twist_cb);
+// Init Left wheel velocity Sub
+ros::Subscriber<std_msgs::Float32> left_sub("/left_cmd_vel", &left_cmd_vel_cb);
+
+// Init Right wheel velocity Sub
+ros::Subscriber<std_msgs::Float32> right_sub("/right_cmd_vel", &right_cmd_vel_cb);
 
 // 100ms interval for measurements
 const int interval = 100;
@@ -165,7 +153,8 @@ void setup() {
   // ROS Setup
   //nh.getHardware()->setBaud(115200);
   nh.initNode();
-  nh.subscribe(twt_sub); // start subscribe to sub
+  nh.subscribe(left_sub); // start subscribe to sub
+  nh.subscribe(right_sub);
   nh.advertise(rightPub);
   nh.advertise(leftPub);
   nh.advertise(imupub);
@@ -189,11 +178,11 @@ void loop() {
 
     //populate data to msg
     //imu_data.header.seq = 0;
-    //imu_data.header.stamp = 0;
+    imu_data.header.stamp = nh.now();
     imu_data.header.frame_id = "imu_link";
 
     q = tf::createQuaternionFromYaw(rpy.z());
-    
+
     imu_data.orientation.x = q.x;
     imu_data.orientation.y = q.y;
     imu_data.orientation.z = q.z;
